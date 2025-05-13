@@ -29,7 +29,6 @@ series_ids = {
     'GDP': 'GDP',
     'CPI': 'CPIAUCSL',
     'Unemployment Rate': 'UNRATE',
-    'Fed Funds Rate': 'FEDFUNDS',
     'Imports': 'IMPGS',
     'Exports': 'EXPGS',
     'Federal Debt: Total Public Debt':'GFDEBTN',
@@ -89,11 +88,6 @@ df['y-o-y inflation']= (df['CPI']-df['CPI'].shift(1))/df['CPI'].shift(1)
 df['Net Exports'] = df['Imports'] - df['Exports']
 df.head()
 
-
-# In[8]:
-
-
-pip freeze > requirements.txt
 
 
 # In[10]:
