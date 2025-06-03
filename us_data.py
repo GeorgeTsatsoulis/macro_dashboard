@@ -40,6 +40,37 @@ else:
     df_monthly = st.session_state.df_monthly
     df_weekly = st.session_state.df_weekly
 
+def show_metric_with_change(df, column_name, label):
+    data = df[[column_name]].dropna().sort_index()
+    if len(data) < 2:
+        return
+
+    current = data.iloc[-1][column_name]
+    previous = data.iloc[-2][column_name]
+    
+    # Inflation keywords to treat as delta, not percent growth
+    inflation_keywords = ["inflation", "cpi", "pce", "deflator"]
+    
+    if any(key.lower() in column_name.lower() for key in inflation_keywords):
+        # Show delta (absolute change)
+        delta_value = current - previous
+        arrow = "▲" if delta_value > 0 else "▼"
+        delta = f"{arrow} {abs(delta_value):.2f}"
+        delta_color = "inverse" if delta_value > 0 else "off" if delta_value < 0 else "normal"
+    else:
+        # Show % growth
+        delta_pct = ((current - previous) / previous) * 100 if previous != 0 else 0
+        arrow = "▲" if delta_pct > 0 else "▼"
+        delta = f"{arrow} {abs(delta_pct):.2f}%"
+        delta_color = "inverse" if delta_pct > 0 else "off" if delta_pct < 0 else "normal"
+
+    st.metric(
+        label=label,
+        value=f"{current:,.2f}",
+        delta=delta,
+        delta_color=delta_color
+    )
+
 # Tabs for sections
 tabs = st.tabs(["Labor Market", "Monetary Metrics", "Fiscal Metrics", "Debtonomics", "Workforce Flows", "Custom Charts"])
 
@@ -63,6 +94,7 @@ with tabs[0]:
         else:
             continue
 
+        show_metric_with_change(source_df, var, var)
         fig = chart_func(source_df, [var], title=var, yaxis_title=get_yaxis_label(var))
         st.plotly_chart(fig, use_container_width=True)
 
@@ -82,6 +114,7 @@ with tabs[1]:
         source_df = df_monthly if var in df_monthly.columns else df_quarterly
         chart_func = plot_monthly_line_chart if source_df is df_monthly else plot_quarterly_line_chart
         if var in source_df.columns:
+            show_metric_with_change(source_df, var, var)
             fig = chart_func(source_df, [var], title=var, yaxis_title=get_yaxis_label(var))
             st.plotly_chart(fig, use_container_width=True)
 
@@ -98,8 +131,10 @@ with tabs[2]:
     ]
     for var in fiscal_vars:
         if var in df_quarterly.columns:
+            show_metric_with_change(df_quarterly, var, var)
             fig = plot_quarterly_line_chart(df_quarterly, [var], title=var, yaxis_title=get_yaxis_label(var))
             st.plotly_chart(fig, use_container_width=True)
+
 
 # 4. Debtonomics
 with tabs[3]:
@@ -114,6 +149,7 @@ with tabs[3]:
     ]
     for var in debt_vars:
         if var in df_quarterly.columns:
+            show_metric_with_change(df_quarterly, var, var)
             fig = plot_quarterly_line_chart(df_quarterly, [var], title=var, yaxis_title=get_yaxis_label(var))
             st.plotly_chart(fig, use_container_width=True)
 
@@ -233,10 +269,15 @@ with tabs[5]:
     if df is not None:
         available_vars = df.columns.tolist()
         selected = st.multiselect("Select variables to plot:", options=available_vars)
+        
         for var in selected:
-            fig = chart_func(df, [var], title=var)
-            fig.update_yaxes(title_text=get_yaxis_label(var))
-            st.plotly_chart(fig, use_container_width=True, key=f"custom_{freq}_{var}")
+            if var in df.columns:
+                show_metric_with_change(df, var, var)  # Pass dataframe, not freq
+                fig = chart_func(df, [var], title=var)
+                fig.update_yaxes(title_text=get_yaxis_label(var))
+                st.plotly_chart(fig, use_container_width=True, key=f"custom_{freq}_{var}")
+            else:
+                st.warning(f"Column '{var}' not found in the {freq} data.")
 
 
 with st.sidebar:
