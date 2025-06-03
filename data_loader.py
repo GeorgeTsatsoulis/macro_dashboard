@@ -69,7 +69,7 @@ def fetch_data_by_frequency():
             except Exception as e:
                 print(f"Failed to load {name} ({code}): {e}")
         df = pd.DataFrame(data)
-        df.dropna(how='all',inplace=True)
+        df.dropna(inplace=True)
         df.index = pd.to_datetime(df.index)
         return df
     

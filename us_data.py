@@ -350,12 +350,115 @@ with tabs[4]:
                     xanchor="right",
                     x=0.38,
                     bgcolor='rgba(255,255,255,0.9)',
-                    bordercolor='lightgray',
+                    bordercolor='black',
                     borderwidth=1
                 )
             )
 
             st.plotly_chart(fig_transitions, use_container_width=True)
+
+    df_weekly_filtered = df_weekly[[
+        'Continued Claims (Insured Unemployment)',
+        '4-Week Moving Average of Continued Claims (Insured Unemployment)'
+    ]].dropna()
+
+    # Choose a transition series to overlay
+    transition_key = 'Monthly Transition Rate of All U.S. Workers From Employment to Non-Employment Due to a Layoff'
+    transition_series = df_monthly[[transition_key]].dropna()
+
+    # Build the figure
+    fig = go.Figure()
+
+    # Plot continued claims
+    fig.add_trace(go.Scatter(
+        x=df_weekly_filtered.index,
+        y=df_weekly_filtered['Continued Claims (Insured Unemployment)'],
+        name='Continued Claims',
+        line=dict(color='crimson', width=3),
+        hovertemplate='%{x|%Y-%m-%d}<br>Claims: %{y:,.0f}<extra></extra>'
+    ))
+
+    # 4-week moving average
+    fig.add_trace(go.Scatter(
+        x=df_weekly_filtered.index,
+        y=df_weekly_filtered['4-Week Moving Average of Continued Claims (Insured Unemployment)'],
+        name='4-Week Moving Avg',
+        line=dict(color='blue', dash='dash', width=3),
+        hovertemplate='%{x|%Y-%m-%d}<br>4W Avg: %{y:,.0f}<extra></extra>'
+    ))
+
+    # Layoff transition rate
+    fig.add_trace(go.Scatter(
+        x=transition_series.index,
+        y=transition_series[transition_key],
+        name='Layoff Transition Rate',
+        yaxis='y2',
+        line=dict(color='darkgreen', width=2),
+        hovertemplate='%{x|%Y-%m}<br>Rate: %{y:.2f}%<extra></extra>'
+    ))
+
+    # COVID annotation
+    fig.add_vrect(
+        x0="2020-03-01", x1="2020-05-01",
+        fillcolor="gray", opacity=0.2,
+        layer="below", line_width=0,
+        annotation_text="COVID Layoff Spike", annotation_position="top left"
+    )
+
+    fig.update_layout(
+        title=dict(
+            text='Unemployment Continuity & Layoff Dynamics (Pandemic Impact)',
+            x=0.5,
+            xanchor='center',
+            font=dict(size=20)
+        ),
+        xaxis=dict(
+            title='Date',
+            tickformat='%Y-%m',
+            showgrid=False,
+            showline=True,
+            linecolor='black',
+            mirror=False,     # No mirror so no top line
+            ticks='outside',
+            zeroline=False
+        ),
+        yaxis=dict(
+            title='Unemployment Claims',
+            showgrid=False,
+            showline=True,
+            linecolor='black',
+            mirror=False,     # No mirror so no right line here
+            ticks='outside',
+            zeroline=False
+        ),
+        yaxis2=dict(
+            title='Layoff Transition Rate (%)',
+            overlaying='y',
+            side='right',
+            showgrid=False,
+            showline=True,
+            linecolor='black',
+            mirror=False,     # no extra lines beyond right side
+            ticks='outside',
+            zeroline=False
+        ),
+        showlegend=True,
+        legend=dict(
+            bgcolor='rgba(0,0,0,0)',
+            bordercolor='gray',
+            borderwidth=1,
+            yanchor="top",
+            y=0.95,
+            xanchor="left",
+            x=0.01
+        ),
+        template='plotly_white',
+        hovermode='x unified',
+        height=550,
+        margin=dict(l=40, r=60, t=80, b=40)
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
 
 # 6. Custom Charts
 with tabs[5]:
@@ -377,7 +480,6 @@ with tabs[5]:
         if missing_or_empty:
             st.warning(f"The following variables have no data and won't plot: {missing_or_empty}")
         available_vars = [col for col in df.columns if not df[col].isna().all()]
-        st.write(f"Available weekly series: {df_weekly.columns.tolist()}")
         selected = st.multiselect("Select variables to plot:", options=available_vars)
         
         for var in selected:
@@ -388,6 +490,8 @@ with tabs[5]:
                 st.plotly_chart(fig, use_container_width=True, key=f"custom_{freq}_{var}")
             else:
                 st.warning(f"Column '{var}' not found in the {freq} data.")
+        # Get the relevant data
+
 
 
 with st.sidebar:
