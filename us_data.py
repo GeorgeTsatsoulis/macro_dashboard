@@ -7,6 +7,12 @@ from utils import get_yaxis_label
 import plotly.express as px 
 import pandas as pd
 import matplotlib.pyplot as plt
+import textwrap
+
+import matplotlib as mpl
+mpl.rcParams['font.family'] = 'Times New Roman'
+mpl.rcParams['font.size'] = 12
+
 
 st.set_page_config(
     page_title="US Economic Dashboard",
@@ -47,28 +53,27 @@ def show_metric_with_change(df, column_name, label):
 
     current = data.iloc[-1][column_name]
     previous = data.iloc[-2][column_name]
-    
-    # Inflation keywords to treat as delta, not percent growth
+
     inflation_keywords = ["inflation", "cpi", "pce", "deflator"]
-    
-    if any(key.lower() in column_name.lower() for key in inflation_keywords):
-        # Show delta (absolute change)
+
+    if any(key in column_name.lower() for key in inflation_keywords):
+        # Show delta as absolute change
         delta_value = current - previous
-        arrow = "▲" if delta_value > 0 else "▼"
-        delta = f"{arrow} {abs(delta_value):.2f}"
-        delta_color = "inverse" if delta_value > 0 else "off" if delta_value < 0 else "normal"
-    else:
-        # Show % growth
+        main_value = f"{delta_value:+,.2f}"
         delta_pct = ((current - previous) / previous) * 100 if previous != 0 else 0
-        arrow = "▲" if delta_pct > 0 else "▼"
-        delta = f"{arrow} {abs(delta_pct):.2f}%"
-        delta_color = "inverse" if delta_pct > 0 else "off" if delta_pct < 0 else "normal"
+        delta_text = f"{delta_pct:+.2f}%"
+    else:
+        # Show delta as percentage change, main value is the delta
+        delta_pct = ((current - previous) / previous) * 100 if previous != 0 else 0
+        main_value = f"{delta_pct:+.2f}%"
+        delta_value = current - previous
+        delta_text = f"{delta_value:+,.2f}"
 
     st.metric(
-        label=label,
-        value=f"{current:,.2f}",
-        delta=delta,
-        delta_color=delta_color
+        label="",
+        value=main_value,
+        delta=delta_text,
+        delta_color="normal"  # no color change, just plain
     )
 
 # Tabs for sections
@@ -178,7 +183,6 @@ with tabs[3]:
 
 # 5. Workforce Flows
 with tabs[4]:
-    st.subheader("Workforce Flows")
 
     # Beveridge Curve
     if df_monthly is not None and 'Job Openings Total Nonfarm' in df_monthly.columns and 'Unemployment Rate' in df_monthly.columns:
@@ -200,7 +204,7 @@ with tabs[4]:
         )
 
         st.plotly_chart(fig_beveridge, use_container_width=True)
-
+        
     # Vacancy-to-Unemployment Ratio Matplotlib
     if df_monthly is not None and 'Job Vacancy-to-Unemployment Ratio' in df_monthly.columns:
         dataset = df_monthly[['Job Vacancy-to-Unemployment Ratio']].dropna().reset_index()
@@ -209,7 +213,8 @@ with tabs[4]:
         dataset['rolling_avg'] = dataset['vacancy_to_unemployment'].rolling(window=4, min_periods=1).mean()
 
         plt.rc('font', family='Times New Roman')
-        fig, ax = plt.subplots(figsize=(12, 4.5))
+        plt.rcParams.update({'font.family': 'Times New Roman'})
+        fig, ax = plt.subplots(figsize=(12, 3.8))
 
         ax.plot(dataset['Periods'], dataset['vacancy_to_unemployment'], color='red', label='Vacancy to Unemployment Ratio', alpha=0.8)
         ax.plot(dataset['Periods'], dataset['rolling_avg'], color='darkred', linestyle='--', label='1-Year Moving Average', linewidth=2)
@@ -227,16 +232,16 @@ with tabs[4]:
         ax.text(max_ratio_period, max_ratio, f'{max_ratio:.2f}', color='red', fontsize=10, ha='left', va='bottom')
         ax.scatter(max_ratio_period, max_ratio, color='red', s=50, label='Peak of Vacancy to Unemployment ratio')
 
-        ax.set_title("Jobseekers vs Job Vacancies", fontsize=12, fontweight='bold', pad=20)
+        ax.set_title("Jobseekers vs Job Vacancies", fontsize=11, fontweight='bold', pad=10)
         ax.axhline(y=1, color='black', linestyle='--', linewidth=1)
 
         mid_period = dataset['Periods'].iloc[len(dataset) // 2]
         ax.annotate('▲ More jobs than unemployed',
                     xy=(mid_period, 1), xytext=(mid_period, 1.05),
-                    fontsize=10, fontweight='bold', ha='left', color='black')
+                    fontsize=10, fontweight='bold', ha='center', color='black')
         ax.annotate('▼ Fewer jobs than unemployed',
                     xy=(mid_period, 1), xytext=(mid_period, 0.9),
-                    fontsize=10, fontweight='bold', ha='left', color='black')
+                    fontsize=10, fontweight='bold', ha='center', color='black')
 
         ax.set_xticks(pd.date_range(start=dataset['Periods'].min(),
                                     end=dataset['Periods'].max(), freq='2YS'))
@@ -245,11 +250,112 @@ with tabs[4]:
         for spine in ax.spines.values():
             spine.set_visible(False)
 
-        ax.legend(loc='upper left', fontsize=10, frameon=False)
+        ax.legend(loc='upper left', fontsize=10, frameon=True,edgecolor='black')
         ax.grid(False)
         fig.tight_layout(pad=1.5)
 
         st.pyplot(fig)
+
+    # Your existing transition_columns dict here
+    transition_columns = {
+        'Monthly Transition Rate of All U.S. Workers From Employment to Non-Employment Due to a Layoff': 'EMELASA',
+        'Monthly Transition Rate of Prime-Age U.S. Workers From Employment to Non-Employment Due to a Layoff': 'EMELPSA',
+        'Monthly Transition Rate of All U.S. Workers From Employment to Non-Employment Due to a Quit': 'EMEQASA',
+        'Monthly Transition Rate of Prime-Age U.S. Workers From Employment to Non-Employment Due to a Quit': 'EMEQPSA'
+    }
+
+    # Color and line style maps
+    color_map = {
+        'Layoff': 'red',
+        'Quit': 'green'
+    }
+    line_style_map = {
+        'Prime-Age': 'dash',
+        'All': 'solid'
+    }
+
+    if df_monthly is not None:
+        valid_cols = [label for label in transition_columns if label in df_monthly.columns]
+        if valid_cols:
+            df_transitions = df_monthly[valid_cols].dropna()
+
+            fig_transitions = go.Figure()
+
+            for col in valid_cols:
+                # Determine label short form for legend
+                label_short = col.split('Monthly Transition Rate of ')[-1]
+                # Decide color & line style
+                is_prime = 'Prime-Age' in label_short
+                is_layoff = 'Layoff' in label_short
+
+                color = color_map['Layoff'] if is_layoff else color_map['Quit']
+                line_dash = line_style_map['Prime-Age'] if is_prime else line_style_map['All']
+
+                fig_transitions.add_trace(go.Scatter(
+                    x=df_transitions.index,
+                    y=df_transitions[col],
+                    mode='lines',
+                    name=label_short,
+                    line=dict(color=color, width=3, dash=line_dash)
+                ))
+
+            # Wrap title nicely
+            wrapped_title = "<br>".join(textwrap.wrap(
+                "Layoffs vs. Quits: The Push and Pull of the Labor Market", 70))
+
+            # Create quarterly tickvals for x-axis to reduce clutter
+            dates = pd.to_datetime(df_transitions.index)
+            tickvals = [date for date in dates if date.month in [1, 7] and date.day == 1]
+            ticktext = [date.strftime('%b %Y') for date in tickvals]
+
+
+
+
+            fig_transitions.update_layout(
+                title=dict(
+                    text=wrapped_title,
+                    x=0.35,
+                    font=dict(size=16, family="Times New Roman")
+                ),
+                xaxis=dict(
+                    title="Date",
+                    showline=True,
+                    linecolor='black',
+                    tickvals=tickvals,
+                    tickformat="%b %Y",
+                    tickangle=45,
+                    tickfont=dict(size=12, family="Times New Roman"),
+                    showgrid=False
+                ),
+                yaxis=dict(
+                    title="Transition Rate (%)",
+                    showline=True,
+                    linecolor='black',
+                    showgrid=False,
+                    gridcolor='lightgray',
+                    zeroline=False
+                ),
+                plot_bgcolor='white',
+                paper_bgcolor='white',
+                font=dict(family="Times New Roman", size=14),
+                hovermode="x unified",
+                height=500,
+                width=900,  # wider figure for more room
+                margin=dict(l=50, r=150, t=70, b=70),  # extra right margin for legend
+                legend=dict(
+                    font=dict(size=12),
+                    orientation="v",
+                    yanchor="top",
+                    y=0.95,
+                    xanchor="right",
+                    x=0.38,
+                    bgcolor='rgba(255,255,255,0.9)',
+                    bordercolor='lightgray',
+                    borderwidth=1
+                )
+            )
+
+            st.plotly_chart(fig_transitions, use_container_width=True)
 
 # 6. Custom Charts
 with tabs[5]:
@@ -266,8 +372,12 @@ with tabs[5]:
         df = df_weekly
         chart_func = plot_weekly_line_chart
 
-    if df is not None:
-        available_vars = df.columns.tolist()
+    if df is not None:       
+        missing_or_empty = [col for col in df.columns if df[col].isna().all()]
+        if missing_or_empty:
+            st.warning(f"The following variables have no data and won't plot: {missing_or_empty}")
+        available_vars = [col for col in df.columns if not df[col].isna().all()]
+        st.write(f"Available weekly series: {df_weekly.columns.tolist()}")
         selected = st.multiselect("Select variables to plot:", options=available_vars)
         
         for var in selected:

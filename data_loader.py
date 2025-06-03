@@ -47,11 +47,18 @@ def fetch_data_by_frequency():
         'Monthly Share of Prime-Age U.S. Workers Who Leave the Labor Force After a Quit':'EMSHRNQP',
         'University of Michigan: Consumer Sentiment':'UMCSENT', ##Index 1966:Q1=100
         'University of Michigan: Inflation Expectation':'MICH',
-        'Economic Policy Uncertainty Index for United States':'USEPUINDXM'
+        'Economic Policy Uncertainty Index for United States':'USEPUINDXM',
+        'Average Hourly Earnings of All Employees, Total Private':'CES0500000003',
+        'Average Weekly Hours of All Employees, Total Private':'AWHAETP',
+        'All Employees Total Nonfarm':'PAYEMS'
 
     }
     
-    weekly_series = {'Initial Claims':'ICSA' ## number
+    weekly_series = {
+                    'Initial Claims':'ICSA', ## number
+                     'Continued Claims (Insured Unemployment)':'CCSA', ##number
+                     '4-Week Moving Average of Initial Claims':'IC4WSA',
+                     '4-Week Moving Average of Continued Claims (Insured Unemployment)':'CC4WSA'
     }
 
     def fetch_series(series_dict):
@@ -62,7 +69,7 @@ def fetch_data_by_frequency():
             except Exception as e:
                 print(f"Failed to load {name} ({code}): {e}")
         df = pd.DataFrame(data)
-        df.dropna(inplace=True)
+        df.dropna(how='all',inplace=True)
         df.index = pd.to_datetime(df.index)
         return df
     

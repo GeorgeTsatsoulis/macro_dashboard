@@ -37,9 +37,15 @@ INDICATOR_UNITS = {
     'Monthly Share of Prime-Age U.S. Workers Who Leave the Labor Force After a Layoff':'Percent',
     'Monthly Share of All U.S. Workers Who Leave the Labor Force After a Quit':'Percent',
     'Monthly Share of Prime-Age U.S. Workers Who Leave the Labor Force After a Quit':'Percent',
-    'University of Michigan: Consumer Sentiment':'IndexIndex (1966 Q1=100)',
+    'University of Michigan: Consumer Sentiment':'Index (1966 Q1=100)',
     'University of Michigan: Inflation Expectation':'Percent',
-    'Economic Policy Uncertainty Index for United States':'Index'
+    'Economic Policy Uncertainty Index for United States':'Index',
+    'Continued Claims (Insured Unemployment)':'Number',
+    '4-Week Moving Average of Continued Claims (Insured Unemployment)':'Number',
+    '4-Week Moving Average of Initial Claims':'Number',
+    'Average Hourly Earnings of All Employees, Total Private':'Dollar per Hour',
+    'Average Weekly Hours of All Employees, Total Private':'Hours',
+    'All Employees Total Nonfarm':'Thousands'
 }
 
 def get_yaxis_label(col_name):
