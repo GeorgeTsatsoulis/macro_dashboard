@@ -12,7 +12,7 @@ def format_month(date):
 def format_week(date):
     return f"{date.isocalendar().year}-W{date.isocalendar().week:02d}"
 
-# Generic plotting function to avoid repetition
+
 def _plot_time_series(df, columns, title, xaxis_title, yaxis_title, date_formatter):
     y_label = get_yaxis_label(columns[0])
     fig = go.Figure()

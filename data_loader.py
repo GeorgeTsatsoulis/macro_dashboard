@@ -1,12 +1,13 @@
 from fredapi import Fred
 import pandas as pd
+import streamlit as st
 
-FRED_API_KEY = '11f924d3790c425dfbe96b3381aa0b3b'
+FRED_API_KEY = st.secrets["api_key"]
+fred = Fred(api_key=FRED_API_KEY)
 
 def fetch_data_by_frequency():
-    fred = Fred(api_key=FRED_API_KEY)
     
-    # Quarterly series (including all federal debt series)
+    # Quarterly series
     quarterly_series = {
         'GDP': 'GDP',
         'Real GDP':'GDPC1',
