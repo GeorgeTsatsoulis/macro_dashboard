@@ -66,7 +66,9 @@ def fetch_data_by_frequency():
         data = {}
         for name, code in series_dict.items():
             try:
-                data[name] = fred.get_series(code)
+                series = fred.get_series(code)
+                data[name] = series
+                print(f"{name} latest date: {series.index[-1]}") 
             except Exception as e:
                 print(f"Failed to load {name} ({code}): {e}")
         df = pd.DataFrame(data)

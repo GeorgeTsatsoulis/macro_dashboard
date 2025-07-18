@@ -8,8 +8,8 @@ import plotly.express as px
 import pandas as pd
 import matplotlib.pyplot as plt
 import textwrap
-
 import matplotlib as mpl
+
 mpl.rcParams['font.family'] = 'Times New Roman'
 mpl.rcParams['font.size'] = 12
 
@@ -20,23 +20,26 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-st.title("US Economic Outlook")
 
-# --- Load and Transform Data ---
-@st.cache_data
+@st.cache_data(ttl=3600)  # 86400 seconds = 1 day
 def load_data():
     df_quarterly, df_monthly, df_weekly = fetch_data_by_frequency()
     df_quarterly = transform_quarterly_data(df_quarterly)
     df_monthly = transform_monthly_data(df_monthly)
-
-    # If you have a transform function for weekly data, use it here; else keep None
-    # df_weekly = transform_weekly_data(df_weekly)
-    df_weekly = transform_weekly_data(df_weekly)  # <-- Set None if no weekly data available
-
+    df_weekly = transform_weekly_data(df_weekly)
     return df_quarterly, df_monthly, df_weekly
 
-# --- Load into session state only if not already stored ---
-if "df_quarterly" not in st.session_state or "df_monthly" not in st.session_state or "df_weekly" not in st.session_state:
+# Add a refresh button to force fresh API call
+if st.button("🔄 Refresh All Data"):
+    load_data.clear()
+    df_quarterly, df_monthly, df_weekly = load_data()
+    st.session_state.df_quarterly = df_quarterly
+    st.session_state.df_monthly = df_monthly
+    st.session_state.df_weekly = df_weekly
+    st.rerun()
+
+# 👇 Load data into session state or use what’s already there
+if "df_quarterly" not in st.session_state:
     df_quarterly, df_monthly, df_weekly = load_data()
     st.session_state.df_quarterly = df_quarterly
     st.session_state.df_monthly = df_monthly
@@ -45,6 +48,7 @@ else:
     df_quarterly = st.session_state.df_quarterly
     df_monthly = st.session_state.df_monthly
     df_weekly = st.session_state.df_weekly
+
 
 def show_metric_with_change(df, column_name, label):
     data = df[[column_name]].dropna().sort_index()
@@ -70,10 +74,10 @@ def show_metric_with_change(df, column_name, label):
         delta_text = f"{delta_value:+,.2f}"
 
     st.metric(
-        label="",
+        label=label,
         value=main_value,
         delta=delta_text,
-        delta_color="normal"  # no color change, just plain
+        delta_color="normal"  
     )
 
 # Tabs for sections
@@ -89,6 +93,7 @@ with tabs[0]:
         "Unemployment Level",
         "Job Openings Total Nonfarm"
     ]
+
     for var in labor_vars:
         if df_monthly is not None and var in df_monthly.columns:
             source_df = df_monthly
@@ -256,7 +261,7 @@ with tabs[4]:
 
         st.pyplot(fig)
 
-    # Your existing transition_columns dict here
+
     transition_columns = {
         'Monthly Transition Rate of All U.S. Workers From Employment to Non-Employment Due to a Layoff': 'EMELASA',
         'Monthly Transition Rate of Prime-Age U.S. Workers From Employment to Non-Employment Due to a Layoff': 'EMELPSA',

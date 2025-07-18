@@ -1,5 +1,6 @@
 import plotly.graph_objects as go
 from utils import get_yaxis_label
+import pandas as pd
 
 # Helpers for formatting datetime index
 def format_quarter(date):
@@ -17,17 +18,22 @@ def _plot_time_series(df, columns, title, xaxis_title, yaxis_title, date_formatt
     y_label = get_yaxis_label(columns[0])
     fig = go.Figure()
     df_formatted = df.copy()
-    df_formatted.index = df_formatted.index.to_series().apply(date_formatter)
+    df_formatted.index = pd.to_datetime(df_formatted.index)
+    df_formatted["display_x"] = df_formatted.index.to_series().apply(date_formatter)
+
 
     for col in columns:
         if col in df.columns:
             fig.add_trace(go.Scatter(
-                x=df_formatted.index,
+                x=df_formatted.index,  # keep actual datetime
                 y=df[col],
                 mode='lines',
                 name=col,
-                line=dict(width=2)
+                line=dict(width=2),
+                text=df_formatted["display_x"],  # add formatted label
+                hovertemplate="%{text}<br>%{y:.2f}<extra></extra>"  # custom hover
             ))
+
 
     fig.update_layout(
         title=dict(text=title, x=0.2, font=dict(size=20)),

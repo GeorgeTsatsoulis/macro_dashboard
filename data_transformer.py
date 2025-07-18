@@ -17,7 +17,7 @@ def transform_quarterly_data(df):
        df['GDP deflator'] = (df['GDP'] / df['Real GDP']) * 100
 
     if 'Real GDP' in df.columns:
-       df['Real GDP Growth'] = (df['Real GDP'] / df['Real GDP']) * 100
+       df['Real GDP Growth'] = df['Real GDP'].pct_change(periods=4) * 100
 
     if 'Exports' in df.columns and 'Imports' in df.columns:
        df['Net Exports'] = df['Exports'] / df['Imports']
